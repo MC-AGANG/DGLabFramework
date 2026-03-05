@@ -31,6 +31,9 @@ Public Class DGServer
     ''' </summary>
     Private DeviceN As Integer = 1
     Private WSSV As WebSocketServer
+    Public Event Connected(devicdId As String)
+    Public Event Received(data As DGMessage)
+    Public Event Disconnected(devicdId As String)
     ''' <summary>
     ''' 创建新的郊狼服务端
     ''' </summary>
@@ -110,12 +113,21 @@ Public Class DGServer
             m.Message = "pulse-B:" + wave.ToString
         End If
         Send(m)
-        Console.WriteLine(m.ToString)
     End Sub
     ''' <summary>
     ''' 关闭服务器
     ''' </summary>
     Public Sub [Stop]()
+        Dim m As DGMessage
+        For Each d In Devices
+            m = New DGMessage(DGMessage.Messagetype.break) With {
+                .ClientID = d,
+                .TargetID = ID,
+                .Message = "209"
+            }
+            Send(m)
+        Next
+
         WSSV.Stop()
         Devices.Clear()
         DeviceN = 1
@@ -153,6 +165,7 @@ Public Class DGServer
         End Try
     End Function
     Public Sub ControlService_ReceivedMessage(data As DGMessage)
+        RaiseEvent Received(data)
         If data.Type = "bind" AndAlso data.TargetID = ID Then
             Dim m As New DGMessage(DGMessage.Messagetype.bind)
             m.ClientID = data.ClientID
@@ -162,6 +175,7 @@ Public Class DGServer
             DeviceN += 1
             Devices.Add(data.ClientID)
             WSSV.AddWebSocketService(Of ControlService)("/1234-123456789-12345-12345-" + DeviceN.ToString("D2"))
+            RaiseEvent Connected(data.ClientID)
         End If
     End Sub
     Public Sub ControlService_Connected()
@@ -170,8 +184,8 @@ Public Class DGServer
         m.Message = "targetId"
         Send(m)
     End Sub
-    Public Sub ControlService_Disconnected()
-
+    Public Sub ControlService_Disconnected(DeviceID As String)
+        RaiseEvent Disconnected(DeviceID)
     End Sub
     ''' <summary>
     ''' 将消息发送给郊狼

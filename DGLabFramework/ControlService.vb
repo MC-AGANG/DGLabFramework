@@ -8,9 +8,11 @@ Public Class ControlService
     Inherits WebSocketBehavior
     Public Shared Event ReceivedMessage(data As DGMessage)
     Public Shared Event Connected()
-    Public Shared Event Disconnected()
+    Public Shared Event Disconnected(ClientID As String)
+    Private ClientID As String
     Protected Overrides Sub OnMessage(e As MessageEventArgs)
         Dim m As New DGMessage(e.Data)
+        ClientID = m.ClientID
         RaiseEvent ReceivedMessage(m)
     End Sub
 
@@ -23,6 +25,6 @@ Public Class ControlService
     ' 当客户端断开时触发
     Protected Overrides Sub OnClose(e As CloseEventArgs)
         MyBase.OnClose(e)
-        RaiseEvent Disconnected()
+        RaiseEvent Disconnected(ClientID)
     End Sub
 End Class
